@@ -43,15 +43,15 @@ to implement flat, gouraud and phong shading
         varying vec3 vColor;
 
         uniform float Ka;
-        uniform vec3 lightLoc;
+        uniform vec3 lightLoc[2];
 
         void main(void) {
-            vec3 lightColor = vec3(1.0, 1.0, 1.0);
+            vec3 lightColor[2];
+            lightColor[0] = vec3(0.0, 0.3, 0.8);   // deep blue
+            lightColor[1] = vec3(1.0, 0.75, 0.2);  // amber
             
             vec3 N = normalize(vNormal);
-            vec3 L = normalize(lightLoc - vPosition);
-            vec3 V = normalize(-vPosition);
-            vec3 H = normalize(L + V);
+        vec3 V = normalize(-vPosition);
             
             float ka = Ka;
             float kd = 0.6;
@@ -59,12 +59,22 @@ to implement flat, gouraud and phong shading
             float shininess = 16.0;
             
             vec3 ambient = ka * vColor;
-            float diff = max(dot(N, L), 0.0);
-            vec3 diffuse = kd * diff * vColor;
-            float spec = pow(max(dot(N, H), 0.0), shininess);
-            vec3 specular = ks * spec * lightColor;
+            vec3 totalDiffuse = vec3(0.0);
+            vec3 totalSpecular = vec3(0.0);
+        
+            for(int i = 0; i < 2; ++i) {
+                vec3 L = normalize(lightLoc[i] - vPosition);
+                vec3 H = normalize(L + V);
+
+                float diff = max(dot(N, L), 0.0);
+                totalDiffuse += kd * diff * lightColor[i];
+                
+                float spec = pow(max(dot(N, H), 0.0), shininess);
+                totalSpecular += ks * spec * lightColor[i];
+            }
             
-            gl_FragColor = vec4(ambient + diffuse + specular, 1.0);
+            vec3 finalColor = clamp(ambient + totalDiffuse + totalSpecular, 0.0, 1.0);
+            gl_FragColor = vec4(finalColor, 1.0);
         }
         </script>
 
@@ -88,49 +98,48 @@ which is used for texture mappping.
 
         // Ambient light coef.
         uniform float Ka;
-        // light1 location (x,y,z)
-        uniform vec3 lightLoc;
+        // light locations (x,y,z)
+        uniform vec3 lightLoc[2];
 
         varying vec4 fragcolor;
 
         void main(void) {
-        vec3 lightColor = vec3(1.0, 1.0, 1.0);
+            vec3 lightColor[2];
+            lightColor[0] = vec3(0.0, 0.3, 0.8);   // deep blue
+            lightColor[1] = vec3(1.0, 0.75, 0.2);  // amber
 
-        // Transform VertexPosition and VertexNormal to world coordinate system
-        vec3 mvVertex = (uMVMatrix * vec4(aVertexPosition, 1.0)).xyz;
-        mat3 normalMVMatrix = mat3(uMVMatrix);
-        vec3 mvNormal = normalMVMatrix * aVertexNormal;
+            // Transform VertexPosition and VertexNormal to world coordinate system
+            vec3 mvVertex = (uMVMatrix * vec4(aVertexPosition, 1.0)).xyz;
+            mat3 normalMVMatrix = mat3(uMVMatrix);
+            vec3 mvNormal = normalMVMatrix * aVertexNormal;
 
-        // V, N, L, H
-        vec3 V = -normalize(mvVertex);
-        vec3 N = normalize(mvNormal);
-        vec3 L = normalize(lightLoc - mvVertex);
-        vec3 H = normalize(L + V);
+            // V, N
+            vec3 V = -normalize(mvVertex);
+            vec3 N = normalize(mvNormal);
+            
+            float ka = Ka;
+            float kd = 0.6;
+            float ks = 0.3;
+            float shininess = 16.0;
 
-        // Ambient, diffuse and specular coef.
-        float ka = Ka;
-        float kd = 0.6;
-        float ks = 0.3;
+            vec3 ambient = ka * aFrontColor;
+            vec3 totalDiffuse = vec3(0.0);
+            vec3 totalSpecular = vec3(0.0);
 
-        vec3 gouraud = vec3(0.5, 0.5, 0.5);
+            for(int i = 0; i < 2; ++i) {
+                vec3 L = normalize(lightLoc[i] - mvVertex);
+                vec3 H = normalize(L + V);
 
-        // *TODO* 
-        //  Finish the formula of ambient, diffuse and specular
+                float diff = max(dot(N, L), 0.0);
+                totalDiffuse += kd * diff * lightColor[i];
+                
+                float spec = pow(max(dot(N, H), 0.0), shininess);
+                totalSpecular += ks * spec * lightColor[i];
+            }
 
-        float shininess = 16.0;
-
-        vec3 ambient = ka * aFrontColor;
-
-        float diff = max(dot(N, L), 0.0);
-        vec3 diffuse = kd * diff * aFrontColor;
-
-        float spec = pow(max(dot(N, H), 0.0), shininess);
-        vec3 specular = ks * spec * lightColor;
-
-        gouraud = ambient + diffuse + specular;
-
-        fragcolor = vec4(gouraud, 1.0);
-        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+            vec3 finalColor = clamp(ambient + totalDiffuse + totalSpecular, 0.0, 1.0);
+            fragcolor = vec4(finalColor, 1.0);
+            gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
         }
         </script>
 
@@ -144,49 +153,48 @@ which is used for texture mappping.
 
         // Ambient light coef.
         uniform float Ka;
-        // light1 location (x,y,z)
-        uniform vec3 lightLoc;
+        // light locations (x,y,z)
+        uniform vec3 lightLoc[2];
 
         varying vec4 fragcolor;
 
         void main(void) {
-        vec3 lightColor = vec3(1.0, 1.0, 1.0);
+            vec3 lightColor[2];
+            lightColor[0] = vec3(0.0, 0.3, 0.8);   // deep blue
+            lightColor[1] = vec3(1.0, 0.75, 0.2);  // amber
 
-        // Transform VertexPosition and VertexNormal to world coordinate system
-        vec3 mvVertex = (uMVMatrix * vec4(aVertexPosition, 1.0)).xyz;
-        mat3 normalMVMatrix = mat3(uMVMatrix);
-        vec3 mvNormal = normalMVMatrix * aVertexNormal;
+            // Transform VertexPosition and VertexNormal to world coordinate system
+            vec3 mvVertex = (uMVMatrix * vec4(aVertexPosition, 1.0)).xyz;
+            mat3 normalMVMatrix = mat3(uMVMatrix);
+            vec3 mvNormal = normalMVMatrix * aVertexNormal;
 
-        // V, N, L, H
-        vec3 V = -normalize(mvVertex);
-        vec3 N = normalize(mvNormal);
-        vec3 L = normalize(lightLoc - mvVertex);
-        vec3 H = normalize(L + V);
+            // V, N
+            vec3 V = -normalize(mvVertex);
+            vec3 N = normalize(mvNormal);
+            
+            float ka = Ka;
+            float kd = 0.6;
+            float ks = 0.3;
+            float shininess = 16.0;
 
-        // Ambient, diffuse and specular coef.
-        float ka = Ka;
-        float kd = 0.6;
-        float ks = 0.3;
+            vec3 ambient = ka * aFrontColor;
+            vec3 totalDiffuse = vec3(0.0);
+            vec3 totalSpecular = vec3(0.0);
 
-        vec3 gouraud = vec3(0.5, 0.5, 0.5);
+            for(int i = 0; i < 2; ++i) {
+                vec3 L = normalize(lightLoc[i] - mvVertex);
+                vec3 H = normalize(L + V);
 
-        // *TODO* 
-        //  Finish the formula of ambient, diffuse and specular
+                float diff = max(dot(N, L), 0.0);
+                totalDiffuse += kd * diff * lightColor[i];
+                
+                float spec = pow(max(dot(N, H), 0.0), shininess);
+                totalSpecular += ks * spec * lightColor[i];
+            }
 
-        float shininess = 16.0;
-
-        vec3 ambient = ka * aFrontColor;
-
-        float diff = max(dot(N, L), 0.0);
-        vec3 diffuse = kd * diff * aFrontColor;
-
-        float spec = pow(max(dot(N, H), 0.0), shininess);
-        vec3 specular = ks * spec * lightColor;
-
-        gouraud = ambient + diffuse + specular;
-
-        fragcolor = vec4(gouraud, 1.0);
-        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+            vec3 finalColor = clamp(ambient + totalDiffuse + totalSpecular, 0.0, 1.0);
+            fragcolor = vec4(finalColor, 1.0);
+            gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
         }
         </script>
 
@@ -240,8 +248,13 @@ which is used for texture mappping.
         var lastTime    = 0;
 
         var ka = 0.1;
-        var light_locations = new Float32Array([30., 20., -25.]);
-
+        // var light_locations = new Float32Array([30., 20., -25.]);
+        var light_num = 2;
+        // var light_locations = Array.from({ length: light_num }, () => new Float32Array([30., 20., -25.]));
+        var light_locations = [
+            new Float32Array([30., 20., -25.]),
+            new Float32Array([-100., -100., -100.])
+        ];
 
         //*************************************************
         // Initialization functions
@@ -303,14 +316,17 @@ which is used for texture mappping.
             var flatFragmentShader = getShader(gl, "flatFragmentShader");
             var flatVertexShader   = getShader(gl, "flatVertexShader");
             flatShaderProgram = createShaderProgram(flatVertexShader, flatFragmentShader);
+            console.log("flat shader program initialized");
 
             var gouraudFragmentShader = getShader(gl, "gouraudFragmentShader");
             var gouraudVertexShader   = getShader(gl, "gouraudVertexShader");
             gouraudShaderProgram = createShaderProgram(gouraudVertexShader, gouraudFragmentShader);
+            console.log("gouraud shader program initialized");
 
             var phongFragmentShader = getShader(gl, "phongFragmentShader");
             var phongVertexShader = getShader(gl, "phongVertexShader");
             phongShaderProgram = createShaderProgram(phongVertexShader, phongFragmentShader);
+            console.log("phong shader program initialized");
         }
 
         function createShaderProgram(customVS, customFS) {
@@ -332,8 +348,12 @@ which is used for texture mappping.
             program.vertexNormalAttribute = gl.getAttribLocation(program, "aVertexNormal");
             gl.enableVertexAttribArray(program.vertexNormalAttribute);
 
+            var flatLightLocs = new Float32Array(light_num * 3);
+            flatLightLocs.set(light_locations[0], 0);
+            flatLightLocs.set(light_locations[1], 3)
+
             gl.uniform1f(gl.getUniformLocation(program, "Ka"), ka);
-            gl.uniform3fv(gl.getUniformLocation(program, "lightLoc"), light_locations);
+            gl.uniform3fv(gl.getUniformLocation(program, "lightLoc"), flatLightLocs);
 
             program.pMatrixUniform  = gl.getUniformLocation(program, "uPMatrix");
             program.mvMatrixUniform = gl.getUniformLocation(program, "uMVMatrix");
@@ -461,12 +481,13 @@ which is used for texture mappping.
     */
 
         function drawAllScene() {
+            console.log("drawAllScene");
             gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
             gl.clearColor(ka, ka, ka, 1.0);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            drawScene(mvMatrix1, pMatrix1, -20, 0, 0, teapot1Angle, flatShaderProgram, true);
-            drawScene(mvMatrix2, pMatrix2, 0, 0, 0, teapot2Angle, gouraudShaderProgram, false);
-            drawScene(mvMatrix3, pMatrix3, 20, 0, 0, teapot3Angle, phongShaderProgram, false);
+            drawScene(mvMatrix1, pMatrix1, -20, 13, 0, teapot1Angle, flatShaderProgram, true);
+            drawScene(mvMatrix2, pMatrix2, 0, 13, 0, teapot2Angle, gouraudShaderProgram, false);
+            drawScene(mvMatrix3, pMatrix3, 20, 13, 0, teapot3Angle, phongShaderProgram, false);
         }
 
         function drawScene(mvMatrix, pMatrix, translate_x, translate_y, translate_z, angle, program, isFlat) {
@@ -542,7 +563,11 @@ which is used for texture mappping.
 
             // Setup ambient light and light position
             gl.uniform1f(gl.getUniformLocation(program, "Ka"), ka);
-            gl.uniform3fv(gl.getUniformLocation(program, "lightLoc"), light_locations);
+
+            var flatLightLocs = new Float32Array(light_num * 3);
+            flatLightLocs.set(light_locations[0], 0);
+            flatLightLocs.set(light_locations[1], 3)
+            gl.uniform3fv(gl.getUniformLocation(program, "lightLoc"), flatLightLocs);
 
             gl.drawArrays(gl.TRIANGLES, 0, vertexPositionBuffer.numItems);
         }
@@ -585,10 +610,16 @@ which is used for texture mappping.
             ka = document.getElementById("am_ka").value;
         }
 
-        function update_light_location(){
-            light_locations[0] = document.getElementById("llocX").value;
-            light_locations[1] = document.getElementById("llocY").value;
-            light_locations[2] = document.getElementById("llocZ").value;
+        function update_light_location(i){
+            if (i == 0) {
+                light_locations[i][0] = parseFloat(document.getElementById("llocX0").value);
+                light_locations[i][1] = parseFloat(document.getElementById("llocY0").value);
+                light_locations[i][2] = parseFloat(document.getElementById("llocZ0").value);
+            } else if (i == 1) {
+                light_locations[i][0] = parseFloat(document.getElementById("llocX1").value);
+                light_locations[i][1] = parseFloat(document.getElementById("llocY1").value);
+                light_locations[i][2] = parseFloat(document.getElementById("llocZ1").value);
+            }
         }
 
         function update_trans(){
@@ -618,7 +649,7 @@ which is used for texture mappping.
         <p style="position: absolute; left: 1%; top: 1%; max-width: 30%; min-width: 30%; ">
 
         <p>
-            <label for="shading">Gouraud shading</label>
+            <label for="shading">CG HW1</label>
         </p>
 
         <br/>
@@ -632,9 +663,17 @@ which is used for texture mappping.
         <span>Light 0</span>
         <table>
             <tr>
-                <td>X: <input style="max-width: 70%; vertical-align: middle;" id="llocX" type="range" autocomplete="off" value="30." max="40." min="-40." oninput="update_light_location()"></td>
-                <td>Y: <input style="max-width: 70%; vertical-align: middle;" id="llocY" type="range" autocomplete="off" value="20." max="40." min="-40." oninput="update_light_location()"></td>
-                <td>Z: <input style="max-width: 70%; vertical-align: middle;" id="llocZ" type="range" autocomplete="off" value="-25." max="0." min="-75." oninput="update_light_location()"></td>
+                <td>X: <input style="max-width: 70%; vertical-align: middle;" id="llocX0" type="range" autocomplete="off" value="40." max="40." min="-40." oninput="update_light_location(0)"></td>
+                <td>Y: <input style="max-width: 70%; vertical-align: middle;" id="llocY0" type="range" autocomplete="off" value="40." max="40." min="-40." oninput="update_light_location(0)"></td>
+                <td>Z: <input style="max-width: 70%; vertical-align: middle;" id="llocZ0" type="range" autocomplete="off" value="0." max="0." min="-75." oninput="update_light_location(0)"></td>
+            </tr>
+        </table>
+        <span>Light 1</span>
+        <table>
+            <tr>
+                <td>X: <input style="max-width: 70%; vertical-align: middle;" id="llocX1" type="range" autocomplete="off" value="-40." max="40." min="-40." oninput="update_light_location(1)"></td>
+                <td>Y: <input style="max-width: 70%; vertical-align: middle;" id="llocY1" type="range" autocomplete="off" value="-40." max="40." min="-40." oninput="update_light_location(1)"></td>
+                <td>Z: <input style="max-width: 70%; vertical-align: middle;" id="llocZ1" type="range" autocomplete="off" value="-75." max="0." min="-75." oninput="update_light_location(1)"></td>
             </tr>
         </table>
         <br/>
